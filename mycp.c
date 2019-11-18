@@ -12,13 +12,51 @@ int argc;
 char* argv[];
 {
 	progname = argv[0];
-	copying(argc, argv);	
+	
+
+	switch (argc)
+	{
+		case 1:
+			error("at least 2 arguments");
+			break;
+		case 2:
+			error("at least 2 arguments");
+			break;
+		case 3:
+			single_copying(argc, argv);
+			break;
+		default:
+			multiple_copying(argc, argv);
+	} 
 
 	exit(0);
 }
 
+int single_copying(argc, argv)
+int argc;
+char* argv[];
+{
+	char buf[BUFSIZ];
 
-int copying(argc, argv)
+	int check;
+	int source;
+	int dest;
+
+	if ((source = open(argv[1], O_RDONLY)) == -1)
+		error("can't open %s", argv[1]);
+
+	if ((dest = open(argv[2], O_CREAT | O_WRONLY)) == -1)
+		error("can't open or create %s", argv[2]);
+
+	while ((check = read(source, buf, BUFSIZ)) > 0)
+		if (write(dest, buf, check) != check)
+			error("write error", (char *) 0);
+
+	close(source);
+	close(dest);
+}
+
+int multiple_copying(argc, argv)
 int argc;
 char* argv[];
 {
@@ -51,12 +89,11 @@ char* argv[];
 
 		free(path);
 
-		while((arg_counter = read(source[i], buf, BUFSIZ)) > 0)
-			if(write(dest[i], buf, arg_counter) != arg_counter)
+		while ((arg_counter = read(source[i], buf, BUFSIZ)) > 0)
+			if (write(dest[i], buf, arg_counter) != arg_counter)
 				error("write error", (char *) 0);
 
 		close(source[i]);
 		close(dest[i]);
 	}
-
 }
