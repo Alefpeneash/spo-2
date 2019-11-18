@@ -3,58 +3,10 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h> 
 
 char* progname;
-
-
-int main(argc, argv)
-int argc;
-char* argv[];
-{
-	progname = argv[0];
-	
-
-	switch (argc)
-	{
-		case 1:
-			error("at least 2 arguments");
-			break;
-		case 2:
-			error("at least 2 arguments");
-			break;
-		case 3:
-			single_copying(argc, argv);
-			break;
-		default:
-			multiple_copying(argc, argv);
-	} 
-
-	exit(0);
-}
-
-int single_copying(argc, argv)
-int argc;
-char* argv[];
-{
-	char buf[BUFSIZ];
-
-	int check;
-	int source;
-	int dest;
-
-	if ((source = open(argv[1], O_RDONLY)) == -1)
-		error("can't open %s", argv[1]);
-
-	if ((dest = open(argv[2], O_CREAT | O_WRONLY)) == -1)
-		error("can't open or create %s", argv[2]);
-
-	while ((check = read(source, buf, BUFSIZ)) > 0)
-		if (write(dest, buf, check) != check)
-			error("write error", (char *) 0);
-
-	close(source);
-	close(dest);
-}
 
 int multiple_copying(argc, argv)
 int argc;
@@ -71,8 +23,7 @@ char* argv[];
 	for (int i = 0; i < argc - 2; i++)
 	{	
 
-		if ((source[i] = open(argv[i + 1], O_RDONLY)) == -1)
-			error("can't open %s", argv[i + 1]);
+		source[i] = open(argv[i + 1], O_RDONLY);
 
 		char* path = (char*) malloc((char)(strlen(dir) + strlen(argv[i + 1])) + sizeof(char));// len of dir and filenames + 1 charsize for '/'
 
@@ -84,16 +35,67 @@ char* argv[];
 		}
 		strcat(path, argv[i + 1]);
 
-		if ((dest[i] = open(path, O_CREAT | O_WRONLY)) == -1)
-			error("can't open or create %s", path);		
+		dest[i] = open(path, O_CREAT | O_WRONLY);
 
 		free(path);
 
-		while ((arg_counter = read(source[i], buf, BUFSIZ)) > 0)
-			if (write(dest[i], buf, arg_counter) != arg_counter)
-				error("write error", (char *) 0);
+		while ((arg_counter = read(source[i], buf, BUFSIZ)) >= 0)
+			write(dest[i], buf, arg_counter);
 
 		close(source[i]);
 		close(dest[i]);
 	}
+
+	return 0;
+}
+
+int single_copying(argv)
+char* argv[];
+{
+	char buf[BUFSIZ];
+
+	int check;
+	int source;
+	int dest;
+
+	struct stat source_stat; 
+	stat(argv[1], &source_stat);
+	printf("%d\n", source_stat.st_mode);
+
+	source = open(argv[1], O_RDONLY);
+
+	dest = open(argv[2], O_CREAT | O_WRONLY);
+
+	while ((check = read(source, buf, BUFSIZ)) > 0)
+		write(dest, buf, check);
+
+	close(source);
+	close(dest);
+	
+	return 0;
+}
+
+int main(argc, argv)
+int argc;
+char* argv[];
+{
+	progname = argv[0];
+	
+
+	switch (argc)
+	{
+		case 1:
+			printf("at least 2 arguments");
+			break;
+		case 2:
+			printf("at least 2 arguments");
+			break;
+		case 3:
+			single_copying(argv);
+			break;
+		default:
+			multiple_copying(argc, argv);
+	} 
+
+	exit(0);
 }
