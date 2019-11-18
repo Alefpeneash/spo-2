@@ -14,7 +14,7 @@ char* argv[];
 {
 	int arg_counter;
 	char buf[BUFSIZ];
-	int source[argc - 2];
+	int source[argc - 2]; //should be rewiritten if multi-threads aren't used
 	int dest[argc - 2];
 	char const SLASH = '/';
 	char const END_OF_STRING='\0';
@@ -24,6 +24,9 @@ char* argv[];
 	{	
 
 		source[i] = open(argv[i + 1], O_RDONLY);
+	
+		struct stat *source_stat = malloc(sizeof(struct stat)); 
+		stat(argv[i + 1], source_stat);
 
 		char* path = (char*) malloc((char)(strlen(dir) + strlen(argv[i + 1])) + sizeof(char));// len of dir and filenames + 1 charsize for '/'
 
@@ -35,11 +38,12 @@ char* argv[];
 		}
 		strcat(path, argv[i + 1]);
 
-		dest[i] = open(path, O_CREAT | O_WRONLY);
+		dest[i] = open(path, O_CREAT | O_WRONLY, source_stat->st_mode);
 
+		free(source_stat);
 		free(path);
 
-		while ((arg_counter = read(source[i], buf, BUFSIZ)) >= 0)
+		while ((arg_counter = read(source[i], buf, BUFSIZ)) > 0)
 			write(dest[i], buf, arg_counter);
 
 		close(source[i]);
@@ -60,11 +64,9 @@ char* argv[];
 
 	struct stat source_stat; 
 	stat(argv[1], &source_stat);
-	printf("%d\n", source_stat.st_mode);
 
 	source = open(argv[1], O_RDONLY);
-
-	dest = open(argv[2], O_CREAT | O_WRONLY);
+	dest = open(argv[2], O_CREAT | O_WRONLY, source_stat.st_mode);
 
 	while ((check = read(source, buf, BUFSIZ)) > 0)
 		write(dest, buf, check);
