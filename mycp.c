@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -24,9 +25,11 @@ char* argv[];
 	{	
 
 		source[i] = open(argv[i + 1], O_RDONLY);
+
+ 		readlink(source[i]);//name of file here
 	
 		struct stat *source_stat = malloc(sizeof(struct stat)); 
-		stat(argv[i + 1], source_stat);
+		fstat(source[i], source_stat);
 
 		char* path = (char*) malloc((char)(strlen(dir) + strlen(argv[i + 1])) + sizeof(char));// len of dir and filenames + 1 charsize for '/'
 
@@ -38,7 +41,7 @@ char* argv[];
 		}
 		strcat(path, argv[i + 1]);
 
-		dest[i] = open(path, O_CREAT | O_WRONLY, source_stat->st_mode);
+		dest[i] = open(path, O_CREAT | O_WRONLY, source_stat->st_mode);//doesn't work
 
 		free(source_stat);
 		free(path);
@@ -63,7 +66,8 @@ char* argv[];
 	int dest;
 
 	struct stat source_stat; 
-	stat(argv[1], &source_stat);
+	fstat(source, &source_stat);
+
 
 	source = open(argv[1], O_RDONLY);
 	dest = open(argv[2], O_CREAT | O_WRONLY, source_stat.st_mode);
@@ -83,7 +87,14 @@ char* argv[];
 {
 	progname = argv[0];
 	
+	struct stat dest_stat; 
+	stat(argv[argc - 1], &dest_stat);
 
+	if (S_ISDIR(dest_stat.st_mode))
+	{
+		multiple_copying(argc, argv);
+	}
+	
 	switch (argc)
 	{
 		case 1:
