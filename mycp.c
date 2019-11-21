@@ -1,3 +1,4 @@
+#include <libgen.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -9,14 +10,34 @@
 
 char* progname;
 
-int multiple_copying(argc, argv)
-int argc;
-char* argv[];
+struct fd_args
+{
+	int dest;
+	int source;
+};
+
+void *copying(void *args)
 {
 	int arg_counter;
 	char buf[BUFSIZ];
-	int source[argc - 2]; //should be rewiritten if multi-threads aren't used
-	int dest[argc - 2];
+
+	while ((arg_counter = read(((struct fd_args*)args)->source, buf, BUFSIZ)) > 0)
+		write(((struct fd_args*)args)->dest, buf, arg_counter);
+
+//	close(((struct fd_args*)args)->source);
+//	close(((struct fd_args*)args)->dest);
+	pthread_exit(NULL);
+}
+
+int copying_to_dir(argc, argv)
+int argc;
+char* argv[];
+{
+//	int arg_counter;
+//	char buf[BUFSIZ];
+//	int source; 
+//	int dest;
+	struct fd_args *args[argc - 1];
 	char const SLASH = '/';
 	char const END_OF_STRING='\0';
 	char* const dir = argv[argc - 1];
@@ -24,39 +45,51 @@ char* argv[];
 	for (int i = 0; i < argc - 2; i++)
 	{	
 
-		source[i] = open(argv[i + 1], O_RDONLY);
+		args[i]->source = open(argv[i + 1], O_RDONLY);
 
- 		readlink(source[i]);//name of file here
+		/* take a source file name memory is allocated with a margin (probably wrong) */
+		char* sfilename = malloc((char)(strlen(argv[i + 1])));
+		strcpy(sfilename, basename(argv[i + 1]));
 	
+		/* this structure is needed because it contains the privileges of the source file */
 		struct stat *source_stat = malloc(sizeof(struct stat)); 
-		fstat(source[i], source_stat);
+		fstat(args[i]->source, source_stat); 
 
-		char* path = (char*) malloc((char)(strlen(dir) + strlen(argv[i + 1])) + sizeof(char));// len of dir and filenames + 1 charsize for '/'
+		/* memory allocation is based on: length of dest path + length of source file name + '/' */
+		char* path = malloc((char)(strlen(dir) + strlen(argv[i + 1])) + sizeof(char));
 
 		strcpy(path, dir);
+		/* here it checks for the presence of '/' at the end of the destination directory path  */
 		if (*(path + (char)strlen(dir) - sizeof(char)) != SLASH)
 		{
 			*(path + (char)strlen(dir)) = SLASH;
 			*(path + (char)strlen(dir) + sizeof(char)) = END_OF_STRING;
 		}
-		strcat(path, argv[i + 1]);
+		/* concatenate the source file name to the end */
+		strcat(path, sfilename);
 
-		dest[i] = open(path, O_CREAT | O_WRONLY, source_stat->st_mode);//doesn't work
-
+		args[i]->dest = open(path, O_CREAT | O_WRONLY, source_stat->st_mode);//doesn't work
+		
+		free(sfilename);
 		free(source_stat);
 		free(path);
 
-		while ((arg_counter = read(source[i], buf, BUFSIZ)) > 0)
-			write(dest[i], buf, arg_counter);
+		pthread_t tid;
+		pthread_create(&tid, NULL, copying, (void *)args[i]);
+		pthread_join(tid, NULL);
 
-		close(source[i]);
-		close(dest[i]);
+//		while ((arg_counter = read(source, buf, BUFSIZ)) > 0)
+//			write(dest, buf, arg_counter);
+		close(args[i]->source);
+		close(args[i]->dest);
+		
+//		close(source);
+//		close(dest);
 	}
-
 	return 0;
 }
 
-int single_copying(argv)
+int copying_to_file(argv)
 char* argv[];
 {
 	char buf[BUFSIZ];
@@ -65,13 +98,11 @@ char* argv[];
 	int source;
 	int dest;
 
+	source = open(argv[1], O_RDONLY);
 	struct stat source_stat; 
 	fstat(source, &source_stat);
-
-
-	source = open(argv[1], O_RDONLY);
 	dest = open(argv[2], O_CREAT | O_WRONLY, source_stat.st_mode);
-
+	
 	while ((check = read(source, buf, BUFSIZ)) > 0)
 		write(dest, buf, check);
 
@@ -92,7 +123,8 @@ char* argv[];
 
 	if (S_ISDIR(dest_stat.st_mode))
 	{
-		multiple_copying(argc, argv);
+		copying_to_dir(argc, argv);
+		exit(0);
 	}
 	
 	switch (argc)
@@ -104,10 +136,10 @@ char* argv[];
 			printf("at least 2 arguments");
 			break;
 		case 3:
-			single_copying(argv);
+			copying_to_file(argv);
 			break;
 		default:
-			multiple_copying(argc, argv);
+			copying_to_dir(argc, argv);
 	} 
 
 	exit(0);
