@@ -10,7 +10,7 @@
 
 char* progname;
 
-struct fd_args
+struct fd
 {
 	int dest;
 	int source;
@@ -21,11 +21,9 @@ void *copying(void *args)
 	int arg_counter;
 	char buf[BUFSIZ];
 
-	while ((arg_counter = read(((struct fd_args*)args)->source, buf, BUFSIZ)) > 0)
-		write(((struct fd_args*)args)->dest, buf, arg_counter);
+	while ((arg_counter = read(((struct fd*)args)->source, buf, BUFSIZ)) > 0)
+		write(((struct fd*)args)->dest, buf, arg_counter);
 
-//	close(((struct fd_args*)args)->source);
-//	close(((struct fd_args*)args)->dest);
 	pthread_exit(NULL);
 }
 
@@ -33,11 +31,7 @@ int copying_to_dir(argc, argv)
 int argc;
 char* argv[];
 {
-//	int arg_counter;
-//	char buf[BUFSIZ];
-//	int source; 
-//	int dest;
-	struct fd_args *args[argc - 1];
+	struct fd *args[argc - 1];
 	char const SLASH = '/';
 	char const END_OF_STRING='\0';
 	char* const dir = argv[argc - 1];
@@ -68,23 +62,19 @@ char* argv[];
 		/* concatenate the source file name to the end */
 		strcat(path, sfilename);
 
-		args[i]->dest = open(path, O_CREAT | O_WRONLY, source_stat->st_mode);//doesn't work
+		args[i]->dest = open(path, O_CREAT | O_WRONLY, source_stat->st_mode);
 		
 		free(sfilename);
 		free(source_stat);
 		free(path);
 
+		/* use pthread to implement multithreading copying */
 		pthread_t tid;
 		pthread_create(&tid, NULL, copying, (void *)args[i]);
 		pthread_join(tid, NULL);
 
-//		while ((arg_counter = read(source, buf, BUFSIZ)) > 0)
-//			write(dest, buf, arg_counter);
 		close(args[i]->source);
 		close(args[i]->dest);
-		
-//		close(source);
-//		close(dest);
 	}
 	return 0;
 }
@@ -92,22 +82,17 @@ char* argv[];
 int copying_to_file(argv)
 char* argv[];
 {
-	char buf[BUFSIZ];
+	struct fd args;	
 
-	int check;
-	int source;
-	int dest;
-
-	source = open(argv[1], O_RDONLY);
+	args.source = open(argv[1], O_RDONLY);
 	struct stat source_stat; 
-	fstat(source, &source_stat);
-	dest = open(argv[2], O_CREAT | O_WRONLY, source_stat.st_mode);
-	
-	while ((check = read(source, buf, BUFSIZ)) > 0)
-		write(dest, buf, check);
+	fstat(args.source, &source_stat);
+	args.dest = open(argv[2], O_CREAT | O_WRONLY, source_stat.st_mode);
 
-	close(source);
-	close(dest);
+	copying(&args);	
+
+	close(args.source);
+	close(args.dest);
 	
 	return 0;
 }
