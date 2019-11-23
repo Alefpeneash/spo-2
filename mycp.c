@@ -1,3 +1,4 @@
+#include <time.h>
 #include <libgen.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -16,8 +17,8 @@ struct fd
 
 struct options
 {
-	int symlink;
-	int hardlink;
+	int verbose;
+	int update;
 };
 
 enum state
@@ -53,24 +54,12 @@ char* argv[];
 
 	for (int i = 0; i < argc - 2; i++)
 	{
-
-		if (opts.hardlink == any)
-		{
-			return 0;	
-		}	
-
-		struct fd *args = malloc(sizeof(struct fd));
-	
-		args->source = open(argv[i + 1], O_RDONLY);
+		time_t currtime = time(NULL);
 
 		/* take a source file name memory is allocated with a margin (probably wrong) */
 		char* sfilename = malloc((char)(strlen(argv[i + 1])));
 		strcpy(sfilename, basename(argv[i + 1]));
-	
-		/* this structure is needed because it contains the privileges of the source file */
-		struct stat *source_stat = malloc(sizeof(struct stat)); 
-		fstat(args->source, source_stat); 
-
+		
 		/* memory allocation is based on: length of dest path + length of source file name + '/' */
 		char* path = malloc((char)(strlen(dir) + strlen(argv[i + 1])) + sizeof(char));
 
@@ -83,23 +72,48 @@ char* argv[];
 		}
 		/* concatenate the source file name to the end */
 		strcat(path, sfilename);
-
-		args->dest = open(path, O_CREAT | O_WRONLY, source_stat->st_mode);
 		
-		free(sfilename);
-		free(source_stat);
-		free(path);
+		/* this structure is needed because it contains the privileges of the source file */
+		struct stat *source_stat = malloc(sizeof(struct stat)); 
+		struct stat *dest_stat = malloc(sizeof(struct stat)); 	
+		struct fd *args = malloc(sizeof(struct fd));
+		args->source = open(argv[i + 1], O_RDONLY);
+		fstat(args->source, source_stat); 	
+		args->dest = open(path, O_CREAT | O_WRONLY, source_stat->st_mode);
+		fstat(args->dest, dest_stat);
 
+
+		if (currtime > dest_stat->st_mtim.tv_sec)
+		{
+			free(sfilename);
+			free(path);
+			free(source_stat);
+			free(dest_stat);
+			close(args->source);
+			close(args->dest);
+			free(args);
+			continue;			
+		}
+			
+		if (opts.verbose == any)
+		{
+			printf("'%s' -> '%s'\n", argv[i + 1], path);
+		}
+	
+		free(sfilename);
+		free(path);
+		free(source_stat);
+		free(dest_stat);
+		
 		/* use pthread to implement multithreading copying */
 		pthread_t *tid = malloc(sizeof(pthread_t));
 		pthread_create(tid, NULL, copying, (void *)args);
 		pthread_join(*tid, NULL);
 		
-		free(tid);
-
-		close(args->dest);
+		close(args->source);
 		close(args->dest);
 		
+		free(tid);
 		free(args);
 	}
 	return 0;
@@ -129,51 +143,46 @@ int argc;
 char* argv[];
 {
 	progname = argv[0];
-	int opt;	
+	int opt;
+	int flagcounter;
 	struct stat dest_stat; 
-	stat(argv[argc - 1], &dest_stat);
 
-	/*
-	-s, --symbolic-link
-        make symbolic links instead of copying
-	-u, --update
-        copy only when the SOURCE file is newer than the destination file or when the destination file is missing
-    -v, --verbose
-        explain what is being done
-	-l, --link
-        hard link files instead of copying
-	*/
-
-	while ((opt = getopt(argc, argv, "sl")) != -1)
+	while ((opt = getopt(argc, argv, "vu")) != -1)
 	{
 		switch (opt)
 		{
-			case 's':
-				opts.symlink = any;
+			case 'v':
+				flagcounter++;
+				opts.verbose = any;
 				break;
-			case 'l':
-				opts.hardlink = any;
+			case 'u':
+				flagcounter++;
+				
 				break;
 			case '?':
 				printf("hz\n");			
 		}
 	}
+	
+	int argcp = argc - flagcounter;
+	char* argvp[argcp];
+	argvp[0] = argv[0];	
 
-	if (opts.symlink == any && opts.hardlink == any)
+	for(int i = 1; i < argcp; i++)
 	{
-		printf("huinya");
-		exit(0);
-	}
-
-	//exit(0);
+		argvp[i] = argv[i + flagcounter];
+	}	
+	
+	stat(argvp[argcp - 1], &dest_stat);
 
 	if (S_ISDIR(dest_stat.st_mode))
 	{
-		copying_to_dir(argc, argv);
+		copying_to_dir(argcp, argvp);
 		exit(0);
 	}
 	
 	switch (argc)
+
 	{
 		case 1:
 			printf("at least 2 arguments");
@@ -182,10 +191,10 @@ char* argv[];
 			printf("at least 2 arguments");
 			break;
 		case 3:
-			copying_to_file(argv);
+			copying_to_file(argvp);
 			break;
 		default:
-			copying_to_dir(argc, argv);
+			copying_to_dir(argcp, argvp);
 	} 
 
 	exit(0);
