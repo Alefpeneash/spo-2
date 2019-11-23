@@ -77,9 +77,17 @@ char* argv[];
 		struct stat *source_stat = malloc(sizeof(struct stat)); 
 		struct stat *dest_stat = malloc(sizeof(struct stat)); 	
 		struct fd *args = malloc(sizeof(struct fd));
-		args->source = open(argv[i + 1], O_RDONLY);
+		if ((args->source = open(argv[i + 1], O_RDONLY)) == -1)
+		{
+			perror(argv[0]);
+			exit(EXIT_FAILURE);
+		}
+		if ((args->dest = open(path, O_CREAT | O_WRONLY, source_stat->st_mode)) == -1)
+		{
+			perror(argv[0]);
+			exit(EXIT_FAILURE);
+		}
 		fstat(args->source, source_stat); 	
-		args->dest = open(path, O_CREAT | O_WRONLY, source_stat->st_mode);
 		fstat(args->dest, dest_stat);
 
 
@@ -123,12 +131,31 @@ char* argv[];
 int copying_to_file(argv)
 char* argv[];
 {
+	time_t currtime = time(NULL); 
 	struct fd args;	
 
-	args.source = open(argv[1], O_RDONLY);
-	struct stat source_stat; 
+	if ((args.source = open(argv[1], O_RDONLY)) == -1)
+	{
+		perror(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+	struct stat source_stat;
 	fstat(args.source, &source_stat);
-	args.dest = open(argv[2], O_CREAT | O_WRONLY, source_stat.st_mode);
+	if((args.dest = open(argv[2i], O_CREAT | O_WRONLY, source_stat.st_mode)) == -1)
+	{
+		perror(argv[0]);
+		exit(EXIT_FAILURE);
+	}
+	struct stat dest_stat;	
+	fstat(args.dest, &dest_stat);
+	
+	if (currtime > dest_stat->st_mtim.tv_sec)
+		exit(EXIT_SUCCESS);
+
+	if (opts.verbose == any)
+	{
+		printf("'%s' -> '%s'\n", argv[1], argv[2]);	
+	}
 
 	copying(&args);	
 
@@ -157,10 +184,10 @@ char* argv[];
 				break;
 			case 'u':
 				flagcounter++;
-				
+				opts.update = any;	
 				break;
 			case '?':
-				printf("hz\n");			
+				exit(EXIT_FAILURE);		
 		}
 	}
 	
@@ -178,18 +205,18 @@ char* argv[];
 	if (S_ISDIR(dest_stat.st_mode))
 	{
 		copying_to_dir(argcp, argvp);
-		exit(0);
+		exit(EXIT_SUCCESS);
 	}
 	
 	switch (argc)
 
 	{
 		case 1:
-			printf("at least 2 arguments");
-			break;
+			printf("%s: missing file operand\n", argv[0]);
+			exit(EXIT_FAILURE);
 		case 2:
-			printf("at least 2 arguments");
-			break;
+			printf("%s: missing destenation file operand after '%s'\n", argv[0], argv[1]);
+			exit(EXIT_FAILURE);
 		case 3:
 			copying_to_file(argvp);
 			break;
@@ -197,5 +224,5 @@ char* argv[];
 			copying_to_dir(argcp, argvp);
 	} 
 
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
