@@ -1,24 +1,18 @@
-#include <dirent.h>
-#include <time.h>
-#include <libgen.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <sys/stat.h>
-#include <fcntl.h>
-#include <sys/types.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h> 
+#include <unistd.h> 
 #include "ctd.h"
 #include "ctf.h"
+#include "cr.h"
 #include "state.h"
 #include "options.h"
-#include "fd.h"
-#include "copying.h"
 #include "gv.h"
 
 char* progname;
-struct options opts = {none, none};
+struct options opts = {none, none, none};
 
 int main(argc, argv)
 int argc;
@@ -27,25 +21,10 @@ char* argv[];
 
 	progname = argv[0];
 	
-	//recdir(arg[1]);	
-
-	//exit(EXIT_SUCCESS);
-	
-	//char** elems;
-	//int* count = malloc(sizeof(int));
-	//*count = 1;
-	//elems = malloc(sizeof(char*));
-	//elems[0] = malloc((strlen(argv[1]) + 1) * sizeof(char));
-	//elems[0] = argv[1];
-
-	//recursive_dir_opener(elems, count);
-
-	//exit(EXIT_SUCCESS);
-	
 	int opt;
 	int flagcounter;
 	
-	while ((opt = getopt(argc, argv, "vu")) != -1)
+	while ((opt = getopt(argc, argv, "vur")) != -1)
 	{
 		switch (opt)
 		{
@@ -57,6 +36,10 @@ char* argv[];
 				flagcounter++;
 				opts.update = any;	
 				break;
+			case 'r':
+				flagcounter++;
+				opts.recursive = any;
+				break;
 			case '?':
 				exit(EXIT_FAILURE);		
 		}
@@ -64,13 +47,20 @@ char* argv[];
 	
 	int argcp = argc - flagcounter;
 	char* argvp[argcp];
-	argvp[0] = argv[0];	
+	argvp[0] = malloc((char)(strlen(argv[0]) + 1));
+	strcpy(argvp[0], argv[0]);	
 
 	for(int i = 1; i < argcp; i++)
 	{
 		argvp[i] = argv[i + flagcounter];
 	}	
-	
+
+	if (opts.recursive == any)
+	{
+		copy_recursively(argvp[1]);
+		exit(EXIT_SUCCESS);
+	}
+
 	struct stat dest_stat; 
 	stat(argvp[argcp - 1], &dest_stat); 
 	

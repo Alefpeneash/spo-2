@@ -1,15 +1,12 @@
-#include <dirent.h>
 #include <time.h>
 #include <libgen.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <sys/types.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h> 
-#include "ctf.h"
 #include "state.h"
 #include "options.h"
 #include "fd.h"

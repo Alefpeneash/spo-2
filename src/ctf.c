@@ -1,19 +1,13 @@
-#include <dirent.h>
 #include <time.h>
-#include <libgen.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <sys/types.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h> 
 #include "state.h"
 #include "options.h"
 #include "fd.h"
 #include "copying.h"
-#include "ctd.h"
 #include "gv.h"
 
 /* called when copying to file (calls copying function) */
