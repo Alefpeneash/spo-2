@@ -1,1 +1,0 @@
-void recdirop(char*);
