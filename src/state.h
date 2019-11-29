@@ -1,0 +1,6 @@
+enum state
+{
+	none,
+	any
+};
+
