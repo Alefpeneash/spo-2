@@ -57,7 +57,7 @@ char* argv[];
 
 	if (opts.recursive == any)
 	{
-		copy_recursively(argvp[1]);
+		copy_recursively(argvp[1], argvp[2]);
 		exit(EXIT_SUCCESS);
 	}
 

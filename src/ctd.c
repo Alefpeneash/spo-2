@@ -18,6 +18,7 @@ int copying_to_dir(argc, argv)
 int argc;
 char* argv[];
 {
+	//change to define
 	char const SLASH = '/';
 	char const END_OF_STRING='\0';
 	char* const dir = argv[argc - 1];
@@ -61,7 +62,7 @@ char* argv[];
 		fstat(args->dest, dest_stat);
 
 
-		if (currtime > dest_stat->st_mtim.tv_sec)
+		if ((opts.update == any) && (currtime > dest_stat->st_mtim.tv_sec))
 		{
 			free(sfilename);
 			free(path);
