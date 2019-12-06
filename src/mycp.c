@@ -12,7 +12,7 @@
 #include "gv.h"
 
 char* progname;
-struct options opts = {none, none, none};
+struct options opts = {none, none, none, none};
 
 int main(argc, argv)
 int argc;
@@ -24,7 +24,7 @@ char* argv[];
 	int opt;
 	int flagcounter;
 	
-	while ((opt = getopt(argc, argv, "vur")) != -1)
+	while ((opt = getopt(argc, argv, "vurf")) != -1)
 	{
 		switch (opt)
 		{
@@ -40,6 +40,10 @@ char* argv[];
 				flagcounter++;
 				opts.recursive = any;
 				break;
+            case 'f':
+                flagcounter++;
+                opts.force = any;
+                break;
 			case '?':
 				exit(EXIT_FAILURE);		
 		}
@@ -71,7 +75,6 @@ char* argv[];
 	}
 	
 	switch (argc)
-
 	{
 		case 1:
 			printf("%s: missing file operand\n", argv[0]);

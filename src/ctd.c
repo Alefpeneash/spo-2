@@ -12,6 +12,7 @@
 #include "fd.h"
 #include "copying.h"
 #include "gv.h"
+#include "errg.h"
 
 /* called when copying to a directory(calls copying function in different threads) */
 int copying_to_dir(argc, argv)
@@ -48,18 +49,43 @@ char* argv[];
 		struct stat *source_stat = malloc(sizeof(struct stat)); 
 		struct stat *dest_stat = malloc(sizeof(struct stat)); 	
 		fd *args = malloc(sizeof(fd));
-		if ((args->source = open(argv[i + 1], O_RDONLY)) == -1)
+		
+        stat(argv[i + 1], source_stat);
+        stat(path, dest_stat);
+
+        int *errn = malloc(sizeof(int));
+        *errn = NO_ERR;
+        
+        if (access(argv[i + 1], R_OK) != 0)
+        {    
+            *errn = SOURCE_PRIVIL;        
+
+            if (access(argv[i + 1], F_OK) != 0)
+                *errn = SOURCE_EXIST;
+        }   
+
+
+        if ((args->source = open(argv[i + 1], O_RDONLY)) == -1)
 		{
-			perror(argv[0]);
+        	perror(error_gen(argv[i + 1], *errn));         
 			exit(EXIT_FAILURE);
 		}
-		fstat(args->source, source_stat); 	
+		//fstat(args->source, source_stat); 	
+
+        if (access(path, R_OK) != 0)
+        {
+            *errn = DEST_PRIVIL;
+
+            if (opts.force == any)
+                remove(path);
+        }
+
 		if ((args->dest = open(path, O_CREAT | O_WRONLY, source_stat->st_mode)) == -1)
 		{
-			perror(argv[0]);
+			perror(error_gen(path, *errn));
 			exit(EXIT_FAILURE);
 		}
-		fstat(args->dest, dest_stat);
+		//fstat(args->dest, dest_stat);
 
 
 		if ((opts.update == any) && (currtime > dest_stat->st_mtim.tv_sec))
@@ -77,8 +103,11 @@ char* argv[];
 		if (opts.verbose == any)
 		{
 			printf("'%s' -> '%s'\n", argv[i + 1], path);
+            if (*errn == DEST_PRIVIL)
+                printf("removed '%s'\n", path);
 		}
-	
+	    
+        free(errn);
 		free(sfilename);
 		free(path);
 		free(source_stat);
