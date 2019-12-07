@@ -22,7 +22,7 @@ char* argv[];
 	progname = argv[0];
 	
 	int opt;
-	int flagcounter;
+	int flagcounter = 0;
 	
 	while ((opt = getopt(argc, argv, "vurf")) != -1)
 	{
@@ -48,8 +48,12 @@ char* argv[];
 				exit(EXIT_FAILURE);		
 		}
 	}
-	
-	int argcp = argc - flagcounter;
+
+    if (flagcounter != 0)
+        flagcounter = flagcounter - strlen(argv[1]) + 2;
+
+    int argcp = argc - flagcounter ;
+
 	char* argvp[argcp];
 	argvp[0] = malloc((char)(strlen(argv[0]) + 1));
 	strcpy(argvp[0], argv[0]);	
@@ -59,22 +63,19 @@ char* argv[];
 		argvp[i] = argv[i + flagcounter];
 	}	
 
-	if (opts.recursive == any)
-	{
-		copy_recursively(argvp[1], argvp[2]);
-		exit(EXIT_SUCCESS);
-	}
 
 	struct stat dest_stat; 
-	stat(argvp[argcp - 1], &dest_stat); 
+	stat(argvp[argcp - 1], &dest_stat);
+    struct stat source_stat;
+    stat(argvp[1], &source_stat); 
 	
-	if (S_ISDIR(dest_stat.st_mode))
+	if (S_ISDIR(dest_stat.st_mode) || S_ISDIR(source_stat.st_mode))
 	{
 		copying_to_dir(argcp, argvp);
 		exit(EXIT_SUCCESS);
 	}
 	
-	switch (argc)
+	switch (argcp)
 	{
 		case 1:
 			printf("%s: missing file operand\n", argv[0]);

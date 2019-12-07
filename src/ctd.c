@@ -13,15 +13,16 @@
 #include "copying.h"
 #include "gv.h"
 #include "errg.h"
+#include "cr.h"
+
+#define SLASH '/'
+#define END_OF_STRING '\0'
 
 /* called when copying to a directory(calls copying function in different threads) */
 int copying_to_dir(argc, argv)
 int argc;
 char* argv[];
 {
-	//change to define
-	char const SLASH = '/';
-	char const END_OF_STRING='\0';
 	char* const dir = argv[argc - 1];
 
 	for (int i = 0; i < argc - 2; i++)
@@ -50,8 +51,8 @@ char* argv[];
 		struct stat *dest_stat = malloc(sizeof(struct stat)); 	
 		fd *args = malloc(sizeof(fd));
 		
-        stat(argv[i + 1], source_stat);
-        stat(path, dest_stat);
+       // stat(argv[i + 1], source_stat);
+       //stat(path, dest_stat);
 
         int *errn = malloc(sizeof(int));
         *errn = NO_ERR;
@@ -70,7 +71,24 @@ char* argv[];
         	perror(error_gen(argv[i + 1], *errn));         
 			exit(EXIT_FAILURE);
 		}
-		//fstat(args->source, source_stat); 	
+		fstat(args->source, source_stat); 	
+
+        /* call recursively_copiyng if there is -r (or handle error) */
+        if (S_ISDIR(source_stat->st_mode))
+        {
+            if (opts.recursive == any)
+            {
+                copy_recursively(argv[i + 1], dir);
+                continue; 
+            }
+            else
+                {   
+                    char* str = error_gen(argv[i + 1], WITHOUT_R);
+                    printf("%s\n", str);
+                    free(str); 
+                    continue;
+                }
+        }
 
         if (access(path, R_OK) != 0)
         {
@@ -79,13 +97,13 @@ char* argv[];
             if (opts.force == any)
                 remove(path);
         }
-
-		if ((args->dest = open(path, O_CREAT | O_WRONLY, source_stat->st_mode)) == -1)
+	
+        if ((args->dest = open(path, O_CREAT | O_WRONLY, source_stat->st_mode)) == -1)
 		{
 			perror(error_gen(path, *errn));
 			exit(EXIT_FAILURE);
 		}
-		//fstat(args->dest, dest_stat);
+		fstat(args->dest, dest_stat);
 
 
 		if ((opts.update == any) && (currtime > dest_stat->st_mtim.tv_sec))

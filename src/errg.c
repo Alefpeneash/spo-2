@@ -32,6 +32,22 @@ int errn;
             strcat(str, obj);
             strcat(str, "'");
             break; 
+    
+        case WITHOUT_R:
+            strcpy(str, progname);
+            strcat(str, ": -r not specified; omitting directory '");
+            strcat(str, obj);
+            strcat(str, "'");
+            break;
+        
+        case SAME_FILE:
+            strcpy(str, progname);
+            strcat(str, ": '");
+            strcat(str, obj);
+            strcat(str, "' and '");
+            strcat(str, obj);
+            strcat(str, "' are the same file");
+            break;
     }
 
     return str;

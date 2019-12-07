@@ -3,7 +3,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdlib.h>
-#include <unistd.h> 
+#include <unistd.h>
+#include <string.h> 
 #include "state.h"
 #include "options.h"
 #include "fd.h"
@@ -15,6 +16,12 @@
 int copying_to_file(argv)
 char* argv[];
 {
+    if (strcmp(argv[1], argv[2]) == 0)
+    {
+        printf("%s\n", error_gen(argv[1], SAME_FILE));
+        exit(EXIT_FAILURE);
+    }
+
 	time_t currtime = time(NULL); 
 	fd args;	
 
@@ -30,7 +37,7 @@ char* argv[];
 
 	if ((args.source = open(argv[1], O_RDONLY)) == -1)
 	{
-		perror(argv[0]);
+		perror(error_gen(argv[1], errn));
 		exit(EXIT_FAILURE);
 	}
     
